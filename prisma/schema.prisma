@@ -1,0 +1,56 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        Int       @id @default(autoincrement())
+  name      String
+  email     String    @unique
+  password  String
+  role      Role      @default(USER)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  otp       String?
+  otpExpiry DateTime? @db.Timestamp(6)
+  otpCount  Int?      @default(0)
+}
+
+model Category {
+  id        Int       @id @default(autoincrement())
+  name      String
+  bannerUrl String?
+  iconUrl   String?
+  products  Product[]
+}
+
+model Product {
+  id          Int            @id @default(autoincrement())
+  name        String
+  subName     String
+  code        String
+  coverDesc   String
+  mainDesc    String
+  keyFeatures String[]
+  categoryId  Int
+  category    Category       @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  images      ProductMedia[]
+}
+
+model ProductMedia {
+  id        Int     @id @default(autoincrement())
+  type      String
+  text      String?
+  productId Int
+  imageUrl  String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+}
+
+enum Role {
+  USER
+  ADMIN
+}

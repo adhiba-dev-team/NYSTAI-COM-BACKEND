@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: nystai-backend
+    env: node
+    plan: free
+    branch: main
+    buildCommand: yarn install
+    startCommand: npm run dev
+    autoDeploy: true
