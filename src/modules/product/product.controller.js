@@ -69,21 +69,18 @@ export const createProduct = async (req, res) => {
       });
     };
 
-    // 3️⃣ Upload cover (single)
     if (req.files?.cover) {
       for (const file of req.files.cover) {
         uploadedFiles.push(await saveFile(file, 'cover', 'cover'));
       }
     }
 
-    // 4️⃣ Upload gallery (multiple)
     if (req.files?.gallery) {
       for (const file of req.files.gallery) {
         uploadedFiles.push(await saveFile(file, 'gallery', 'gallery'));
       }
     }
 
-    // 5️⃣ Upload smart icons with text (multiple)
     if (req.files?.smartIcons) {
       for (let i = 0; i < req.files.smartIcons.length; i++) {
         const file = req.files.smartIcons[i];
@@ -92,7 +89,6 @@ export const createProduct = async (req, res) => {
       }
     }
 
-    // 🔄 Clear cache after create
     await clearCachedProducts();
 
     res.status(201).json({
@@ -107,23 +103,20 @@ export const createProduct = async (req, res) => {
 
 export const getProducts = async (req, res) => {
   try {
-    // 1️⃣ Check Redis cache first
     const cacheData = await redisClient.get('products');
     if (cacheData) {
       console.log(' Cache hit: products');
       return res.json(JSON.parse(cacheData));
     }
 
-    // 2️⃣ Fetch from DB
     const products = await productService.getAllProducts();
 
-    // 3️⃣ Save to Redis with expiration (3600 seconds = 1 hour)
     await redisClient.setEx('products', 3600, JSON.stringify(products));
 
     console.log('💾 Cache set: products');
     res.json(products);
   } catch (error) {
-    console.error(' getProducts error:', error); // log full error for debugging
+    console.error(' getProducts error:', error); 
     res.status(500).json({
       error: 'Server error',
       details: error.message,
@@ -137,8 +130,8 @@ export const getProductById = async (req, res) => {
     const product = await prisma.product.findUnique({
       where: { id: parseInt(id) },
       include: {
-        images: true, // include ProductMedia
-        category: true, // include related category
+        images: true, 
+        category: true,
       },
     });
 
@@ -156,8 +149,6 @@ export const getProductById = async (req, res) => {
 export const updateProduct = async (req, res) => {
   try {
     const { id } = req.params;
-
-    // 1️⃣ Find existing product
     const existing = await prisma.product.findUnique({
       where: { id: parseInt(id) },
       include: { images: true },
@@ -165,8 +156,6 @@ export const updateProduct = async (req, res) => {
 
     if (!existing)
       return res.status(404).json({ message: 'Product not found' });
-
-    // 2️⃣ Prepare updated fields
     const dataToUpdate = {};
     if (req.body.categoryId)
       dataToUpdate.categoryId = Number(req.body.categoryId);
@@ -177,16 +166,11 @@ export const updateProduct = async (req, res) => {
     if (req.body.mainDesc) dataToUpdate.mainDesc = req.body.mainDesc;
     if (req.body.keyFeatures)
       dataToUpdate.keyFeatures = JSON.parse(req.body.keyFeatures);
-
-    // 3️⃣ Update product fields
     const product = await prisma.product.update({
       where: { id: parseInt(id) },
       data: dataToUpdate,
     });
-
     const uploadedFiles = [];
-
-    // 4️⃣ Helper function to upload files
     const saveFile = async (file, folder, type, text = null) => {
       const ext = path.extname(file.originalname);
       const safeName = path
@@ -206,8 +190,6 @@ export const updateProduct = async (req, res) => {
         data: { type, text, imageUrl: blob.url, productId: product.id },
       });
     };
-
-    // 5️⃣ Replace old files if new ones uploaded
     if (req.files?.cover) {
       await prisma.productMedia.deleteMany({
         where: { productId: product.id, type: 'cover' },
